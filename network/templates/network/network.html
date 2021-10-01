@@ -1,0 +1,26 @@
+{% extends "network/layout.html" %}
+{% load static %}
+
+
+{% block body %}
+
+    <div id="profile-view"> 
+
+    </div>
+
+    <div id="posts-view">
+    
+    </div>
+
+    <div id="compose-view">
+        <h3>New Post</h3>
+        <form id="compose-form">
+            <textarea class="form-control" id="compose-body" placeholder="Body"></textarea>
+            <input id="click" type="submit" class="btn btn-primary"/>
+        </form>
+    </div>
+
+{% endblock %}
+
+
+
