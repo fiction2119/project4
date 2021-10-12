@@ -1,9 +1,9 @@
 from django.contrib import admin
 
-from .models import Post, Follow, Interact  # , Like
+from .models import User, Post, Follow, Like
 
 # Register your models here.
-admin.site.register(Interact)
+admin.site.register(User)
 admin.site.register(Post)
 admin.site.register(Follow)
-# admin.site.register(Like)
+admin.site.register(Like)

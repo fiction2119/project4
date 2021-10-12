@@ -9,7 +9,7 @@ from django.shortcuts import render
 from django.urls import reverse
 
 
-from .models import User, Post, Interact, Follow
+from .models import User, Post, Like, Follow
 
 
 def index(request):
@@ -39,6 +39,7 @@ def login_view(request):
             return render(request, "network/login.html", {
                 "message": "Invalid username and/or password."
             })
+
     else:
         return render(request, "network/login.html")
 
@@ -86,38 +87,43 @@ def post(request):
 
     # Getting necessary data to save new post
     data = json.loads(request.body)
+    print(data)
     body = data.get("body", "")
+    print(body)
     user = User.objects.get(username=request.user.username)
+    print(user)
     post = Post(user=user, body=body)
+    print(post)
     post.save()
 
     return JsonResponse({"message": "Post sent successfully."}, status=201)
 
 
 @login_required
-def all_posts(request):
+def allPosts(request):
 
     # Get and return all posts in reverse chronological order
     posts = Post.objects.all()
 
-    posts = posts.order_by("-timestamp").all()
     return JsonResponse([post.serialize() for post in posts], safe=False)
 
 
 @csrf_exempt
 @login_required
-def profile(request, profile_str):
+def userProfile(request, pk):
 
-    user = User.objects.get(username=request.user.username)
-    user2 = User.objects.get(username=profile_str)
-    follow = Follow(user1=user, user2=user2)
+    user = User.objects.get(id=pk)
 
-    if not Follow.objects.filter(user1=user, user2=profile):
-        follow.save()
+    follow = Follow.objects.get(follower=request.user, following=user.username)
+
+    if not follow:
+        isFollowing = False
+    else:
+        isFollowing = True
 
     if request.method == 'GET':
         # Get profile data and serialize it
-        return JsonResponse(user2.serialize())
+        return JsonResponse(user.serialize())
 
     elif request.method == 'PUT':
         data = json.loads(request.body)
@@ -130,10 +136,10 @@ def profile(request, profile_str):
 
 
 @login_required
-def profile_posts(request, profile_str):
+def profilePosts(request, pk):
 
     # Get posts from current profile and return them serialized
-    user = User.objects.get(username=profile_str)
+    user = User.objects.get(username=pk)
     user_posts = Post.objects.filter(user=user)
 
     return JsonResponse([post.serialize() for post in user_posts], safe=False)
