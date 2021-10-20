@@ -79,21 +79,21 @@ def register(request):
 
 @csrf_exempt
 @login_required
-def post(request):
+def compose(request):
 
     # Composing a new post must be via POST
     if request.method != "POST":
         return JsonResponse({"error": "POST request required."}, status=400)
 
-    # Getting necessary data to save new post
+    # Transforming request.body into usable json data
     data = json.loads(request.body)
-    print(data)
+
+    # Getting the value correspondent to body, which will be the content of the post
     body = data.get("body", "")
-    print(body)
+
     user = User.objects.get(username=request.user.username)
-    print(user)
-    post = Post(user=user, body=body)
-    print(post)
+    post = Post(author=user, body=body)
+
     post.save()
 
     return JsonResponse({"message": "Post sent successfully."}, status=201)
@@ -110,57 +110,51 @@ def allPosts(request):
 
 @csrf_exempt
 @login_required
-def userProfile(request, pk):
-
-    user = User.objects.get(id=pk)
-
-    follow = Follow.objects.get(follower=request.user, following=user.username)
-
-    if not follow:
-        isFollowing = False
-    else:
-        isFollowing = True
+def userProfile(request, username):
 
     if request.method == 'GET':
         # Get profile data and serialize it
-        return JsonResponse(user.serialize())
-
-    elif request.method == 'PUT':
-        data = json.loads(request.body)
-        if data.get('follow') is not None:
-            follow.follow = data['follow']
-        follow.save()
-        return HttpResponse(status=204)
+        profileUser = User.objects.get(username=username)
+        return JsonResponse(profileUser.serialize())
     else:
-        return JsonResponse({"error": "GET or PUT request required"}, status=400)
+        return JsonResponse({"error": "GET request required"}, status=400)
 
 
 @login_required
-def profilePosts(request, pk):
+def profilePosts(request, username):
 
-    # Get posts from current profile and return them serialized
-    user = User.objects.get(username=pk)
-    user_posts = Post.objects.filter(user=user)
+    # Get profile posts and serialize them
+    user = User.objects.get(username=username)
+    user_posts = Post.objects.filter(author=user)
 
     return JsonResponse([post.serialize() for post in user_posts], safe=False)
 
 
 @csrf_exempt
 @login_required
-def follow(request, profile_str):
+def follow(request, username):
 
-    follow = Follow.objects.filter(
-        user1=request.user.username, user2=profile_str)
+    try:
+        loggedUser = User.objects.get(username=request.user)
+        profileUser = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "User not found."}, status=204)
 
-    if not follow:
-        follow = Follow(user1=request.user.username, user2=profile_str)
+    if request.user != username:
+        follow, created = Follow.objects.get_or_create(
+            follower=loggedUser, following=profileUser)
+
+    if request.method == "GET":
+        return JsonResponse(follow.serialize())
+
+    elif request.method == "PUT":
+        data = json.loads(request.body)
+        if data.get("is_following") is not None:
+            follow.is_following = data["is_following"]
         follow.save()
+        return HttpResponse(status=204)
 
-    if len(follow) == 1:
-        follow = Follow.objects.get(
-            user1=request.user.username, user2=profile_str)
-        print(follow.follow)
     else:
-        return JsonResponse({"error": "The result must be 1"}, status=400)
-
-    return HttpResponse(status=204)
+        return JsonResponse({
+            "error": "GET or PUT request required."
+        }, status=400)

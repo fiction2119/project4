@@ -10,10 +10,12 @@ urlpatterns = [
     path("register", views.register, name="register"),
 
     # API Routes
-    path("post", views.post, name="post"),
+    path("compose", views.compose, name="compose"),
     path("posts", views.allPosts, name="all-posts"),
-    path("profile/<str:pk>", views.userProfile, name="profile"),
-    path("profile/posts/<str:pk>",
+    path("profile/<str:username>", views.userProfile, name="profile"),
+    path("profile/<str:username>/follow", views.follow, name="follow"),
+    path("profile/posts/<str:username>",
          views.profilePosts, name="profile-posts"),
+
 
 ]

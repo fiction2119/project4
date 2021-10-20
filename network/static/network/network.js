@@ -1,11 +1,11 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#new-post').addEventListener('click', () => {
         load_compose();
     });
 
     document.querySelector('#all-posts').addEventListener('click', () => {
         load_posts();
-        getAllPosts();
+        getPosts();
     });
 });
 
@@ -22,7 +22,7 @@ function load_compose() {
 // Show posts view
 function load_posts() {
 
-    document.querySelector('#profile-view').innerHTML= ''
+    document.querySelector('#profile-view').innerHTML = ''
     // Show posts and hide compose 
     document.querySelector('#profile-view').style.display = 'none';
     document.querySelector('#compose-view').style.display = 'none';
@@ -36,155 +36,157 @@ function load_profile() {
     document.querySelector('#profile-view').style.display = 'block';
 }
 
-async function getAllPosts() {
+async function getPosts() {
     // Get all posts
     const response = await fetch('/posts');
     const data = await response.json();
 
+
     // Delete data stored in posts-view
-    document.querySelector('#posts-view').innerHTML= ''
+    document.querySelector('#posts-view').innerHTML = ''
 
     for (let i = 0; i < data.length; i++) {
         // Instantiate desired elements
         let div = document.createElement('div');
-        let a = document.createElement('a');
-        let anchorText = document.createTextNode(`${data[i]['username']}`);
-        
-        // Customize elements
-        a.href= '#';
-        a.className = 'anchors';
-        
-        // TODO: USE THIS DATA
-        username = data[i]['username'];
-        body = data[i]['body'];
-        timestamp = data[i]['timestamp'];
-        likes = data[i]['likes'];
-        
-        // Append elements
-        a.appendChild(anchorText);
-        div.append(a, ` -> ${body}`);
+        let anchor = document.createElement('a');
+
+        // Declaring variables from data received
+        let username = data[i]['username'];
+        let body = data[i]['body'];
+        let created = data[i]['created'];
+        // let likes = data[i]['likes'];
+        let user_id = data[i]['user_id'];
+
+        // Customizing anchor element with variables above
+        let text = document.createTextNode(`${username} -> ${body}, on ${created}`);
+        anchor.appendChild(text);
+        anchor.href = `profile/${username}`;
+        anchor.addEventListener('click', (event) => {
+            document.querySelector('#profile-view').innerHTML = '';
+            event.preventDefault();
+            getProfile(username);
+            load_profile();
+        })
+
+        // Appending anchor to div and div to posts-view
+        div.append(anchor);
         document.querySelector('#posts-view').append(div);
     };
 
-    // For each element in elements, add click listener
-    let elements = document.querySelectorAll('.anchors');
-    for (let i = 0; i < elements.length; i++) {
-        elements[i].addEventListener('click', () => {
-            document.querySelector('#profile-view').innerHTML = '';
-            getProfile(elements[i].innerText);
-            load_profile();
-        });
-    };
+
 };
 
-async function getProfile(user) {
-    // Get profile data 
-    const response = await fetch(`/profile/${user}`);
-    const data = await response.json();
-    console.log(data);
+async function getProfile(username) {
+    // Get current profile data 
+    const response = await fetch(`/profile/${username} `);
+    const userData = await response.json();
+
+    // Instantiate elements, customize and append them
+    let h4 = document.createElement('h4');
+    h4.innerHTML = userData['username'];
+    document.querySelector('#profile-view').append(h4);
+
     // Get profile's posts data
-    const response2 = await fetch(`/profile/posts/${user}`);
-    const data2 = await response2.json();
-    console.log(data2);
-
-    // Instantiate elements
-    header = document.createElement('h3');
-    p = document.createElement('p');
-    btn = document.createElement('btn');
-
-    // Customize elements
-    header.innerHTML = data['username'];
-    p.innerHTML = ` ${data['followers']} || ${data['following']}`;
-    btn.className = 'btn btn-sm btn-outline-primary';
-    btn.innerHTML = 'Follow';
-
-    // Append desired elements to profile-view
-    document.querySelector('#profile-view').append(header);
-    document.querySelector('#profile-view').append(p);
-    document.querySelector('#profile-view').append(btn);
-
-    btn.addEventListener('click', () => {
-        follow(user);
-    });
+    const response2 = await fetch(`/profile/posts/${username} `);
+    const userPosts = await response2.json();
+    console.log(userPosts)
 
     // For loop to apply instructions to every post
-    for (let i = 0; i < data2.length; i++) {
+    for (let i = 0; i < userPosts.length; i++) {
 
         // Create elements for each post
         let p = document.createElement('p');
         let br = document.createElement('br');
 
         // Get the desired data to append
-        username = data2[i]['username'];
-        body = data2[i]['body'];
-        timestamp = data2[i]['timestamp'];
-        likes = data2[i]['likes'];
+        let username = userPosts[i]['username'];
+        let body = userPosts[i]['body'];
+        let created = userPosts[i]['created'];
+        // let likes = userPosts[i]['likes'];
 
         // Customize data
-        p.innerHTML = `${data2[i]['body']}`;
+        p.innerHTML = `${username} -> ${body}, on ${created}`;
 
         // Append elements w/ data to div
         document.querySelector('#profile-view').append(p);
         document.querySelector('#profile-view').append(br);
     };
-};
 
-async function follow(user, button) {
-    const response = await fetch(`profile/${user}/follow`);
-    const data = await response.json();
-    console.log(data)
+    // Retrieving data from api about follow info
+    const response3 = await fetch(`profile/${username}/follow`);
+    const followData = await response3.json();
 
+    // Button customization
+    let btn = document.createElement('btn');
+    btn.className = 'btn btn-sm btn-outline-primary';
 
-    /*
-    if (button.innerText == 'Follow') {
-        const response = await fetch(`/profile/${user}`,  {
-            method: 'PUT',
-            body: JSON.stringify({
-                follow: true
-            })
+    // Check if data retrieved returns true or false and change text of button accordingly + give it a click listener to follow/unfollow
+    if (followData['is_following']) {
+        btn.innerHTML = "Follow"
+        btn.addEventListener('click', () => {
+            follow(username);
         });
-
-        if(response.status == 204) {
-            console.log('OK!')
-        }
-        else {
-            console.log('ERROR')
-        };
     }
     else {
-        const response = await fetch(`/profile/${user}`,  {
-            method: 'PUT',
-            body: JSON.stringify({
-                follow: false
-            })
+        btn.innerHTML = "Unfollow"
+        btn.addEventListener('click', () => {
+            unfollow(username);
         });
+    };
 
-        if(response.status == 204) {
-            console.log('OK!');
-        }
-        else { 
-            console.log('ERROR');
-        };
+
+    document.querySelector('#profile-view').append(btn);
+};
+
+async function follow(user) {
+    const response = await fetch(`/profile/${user}/follow`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            follow: true
+        })
+    });
+
+    if (response.status == 204) {
+        console.log('OK!')
     }
-    */
+    else {
+        console.log('ERROR')
+    };
 }
+
+async function unfollow(user) {
+    const response = await fetch(`/profile/${user}/follow`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            follow: false
+        })
+    });
+
+    if (response.status == 204) {
+        console.log('OK!');
+    }
+    else {
+        console.log('ERROR');
+    };
+}
+
 
 // Compose post 
 document.addEventListener('DOMContentLoaded', () => {
 
-    document.querySelector('#compose-form').onsubmit = function() {
+    document.querySelector('#compose-form').onsubmit = function () {
         const body = document.querySelector('#compose-body').value;
-    
-        fetch('/post', {
+
+        fetch('/compose', {
             method: 'POST',
             body: JSON.stringify({
-                body:body,
+                body: body,
             })
         })
-        .then(response => response.json())
-        .then(result => {
-            console.log(result);
-        });
+            .then(response => response.json())
+            .then(result => {
+                console.log(result);
+            });
     };
 });
 

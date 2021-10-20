@@ -3,7 +3,18 @@ from django.db import models
 
 
 class User(AbstractUser):  # AbstractUser is customizable
-    pass
+    username = models.CharField(max_length=200, unique=True, null=True)
+    bio = models.TextField(null=True)
+    #avatar = models.ImageField(null= True, default="avatar.svg")
+
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = []
+
+    def serialize(self):
+        return {
+            "username": self.username,
+            "bio": self.bio,
+        }
 
 
 class Post(models.Model):
@@ -17,10 +28,10 @@ class Post(models.Model):
 
     def serialize(self):
         return {
+            "user_id": self.author.id,
             "username": self.author.username,
             "body": self.body,
-            "created": self.created,
-            "likes": self.likes,
+            "created": self.created
         }
 
     def __str__(self):
@@ -29,9 +40,10 @@ class Post(models.Model):
 
 class Follow(models.Model):
     follower = models.ForeignKey(
-        "User", on_delete=models.CASCADE, related_name="user1", default=None)
+        "User", on_delete=models.CASCADE, related_name="follower", default=None)
     following = models.ForeignKey(
-        "User", on_delete=models.CASCADE, related_name="user2", default=None)
+        "User", on_delete=models.CASCADE, related_name="following", default=None)
+    is_following = models.BooleanField(default=False)
 
     class Meta:
         unique_together = (
@@ -40,9 +52,9 @@ class Follow(models.Model):
 
     def serialize(self):
         return {
-            "follow_id": self.id,
             "follower": self.follower.username,
             "following": self.following.username,
+            "is_following": self.is_following,
         }
 
 
@@ -56,6 +68,6 @@ class Like(models.Model):
     def serialize(self):
         return {
             "post_id": self.post.id,
-            "user": self.user,
+            "user": self.user.username,
             "like": self.like,
         }
