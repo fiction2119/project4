@@ -158,3 +158,26 @@ def follow(request, username):
         return JsonResponse({
             "error": "GET or PUT request required."
         }, status=400)
+
+
+@login_required
+def followingPosts(request):
+
+    user = User.objects.get(username=request.user)
+    data = Follow.objects.filter(follower=user,     is_following=True).all()
+
+    data_list = []
+    data_json = {}
+
+    for i in range(0, data.count()):
+        data_list += data[i].following.post_set.values()
+        username = data[i].following.username
+        body = data_list[i]['body']
+        created = data_list[i]['created']
+        data_json[f'{username}'] = {}
+        data_json[f'{username}']['body'] = body
+        data_json[f'{username}']['created'] = str(created)
+
+    data_full = json.dumps(data_json, indent=2)
+
+    return JsonResponse(data_full, safe=False)
