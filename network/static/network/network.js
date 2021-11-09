@@ -1,3 +1,5 @@
+
+
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('#new-post').addEventListener('click', () => {
         load_compose();
@@ -47,6 +49,8 @@ function load_profile() {
 // Show following view
 function load_following_posts() {
 
+    document.querySelector('#following-view').innerHTML = '';
+
     // Show following and hide other views
     document.querySelector('#posts-view').style.display = 'none';
     document.querySelector('#compose-view').style.display = 'none';
@@ -54,18 +58,171 @@ function load_following_posts() {
     document.querySelector('#following-view').style.display = 'block';
 }
 
+
+function makePagination(api, view, current_page, results_per_page, page_num) {
+
+
+    // Declaring parent elements for pagination
+    const nav = document.createElement('nav');
+    nav.ariaLabel = "Page navigation";
+    nav.id = "pagination_nav";
+
+    let ul = document.createElement('ul');
+    ul.className = "pagination justify-content-center";
+    ul.id = "pagination_ul";
+    // Making pagination 
+    for (let btn = 0; btn <= 2; btn++) {
+        // Instantiate elements
+        let li = document.createElement('li');
+        let a = document.createElement('a');
+        let span = document.createElement('span');
+
+        // Customize, addEventListener and append anchor + span to list item 
+        a.className = "page-link";
+        a.href = "#";
+
+        span.className = "page-link";
+        span.href = "#";
+
+        // Previous button
+        if (btn === 0) {
+            a.innerText = "Previous";
+            a.id = "btn_previous";
+            a.addEventListener('click', () => {
+                if (current_page > 1) {
+                    current_page--;
+                    changePage(api, view, current_page, page_num, results_per_page);
+                }
+            });
+
+            li.append(a);
+            li.className = "page-item";
+        }
+        // Current page 
+        else if (btn === 1) {
+            span.innerText = current_page;
+            span.id = "page";
+
+            li.append(span);
+            li.className = "page-item";
+        }
+        // Next button
+        else {
+            a.innerText = 'Next';
+            a.id = "btn_next";
+            a.addEventListener('click', () => {
+                if (current_page < page_num) {
+                    current_page++;
+                    changePage(api, view, current_page, page_num, results_per_page);
+                }
+            });
+            li.append(a);
+            li.className = "page-item";
+        };
+        ul.append(li);
+    };
+
+    nav.append(ul);
+    view.append(nav);
+}
+
+async function changePage(api, view, current_page, page_num, results_per_page) {
+
+    const response = await fetch(`${api}`);
+    const data = await response.json();
+
+    let btn_next = document.getElementById("btn_next");
+    let btn_previous = document.getElementById("btn_previous");
+    let page_span = document.getElementById("page");
+
+    // Validate page
+    if (current_page < 1) current_page = 1;
+    if (current_page > page_num) current_page = page_num;
+
+    view.innerHTML = "";
+    console.log(view.id);
+
+    for (let i = (current_page - 1) * results_per_page; i < (current_page * results_per_page) && i < data.length; i++) {
+
+        if (String(view.id) === "profile-view") {
+            let p = document.createElement('p');
+            let br = document.createElement('br');
+
+            // Get the desired data to append
+
+            let body = data[i]['body'];
+            let created = data[i]['created'];
+            // let likes = userPosts[i]['likes'];
+
+            // Customize data
+            p.innerHTML = `${body}, on ${created}`;
+
+            // Append elements w/ data to div
+            view.append(p);
+            view.append(br);
+        }
+        else {
+            // Instantiate desired elements
+            let anchor_div = document.createElement('div');
+            let anchor = document.createElement('a');
+
+            // Declaring variables from data received
+            let username = data[i]['username'];
+            let body = data[i]['body'];
+            let created = data[i]['created'];
+            // let likes = data[i]['likes'];
+
+            // Anchor customization w/ variables declared above
+            let text = document.createTextNode(`${username} -> ${body}, on ${created}`);
+            anchor.appendChild(text);
+            anchor.href = '#';
+
+            // On clicking the anchor, prevent default behaviour and get+ show profile data
+            anchor.addEventListener('click', (event) => {
+                document.querySelector('#profile-view').innerHTML = '';
+                event.preventDefault();
+                load_profile();
+                getProfile(username);
+
+
+            });
+            // Appending anchor to div and div to posts-view
+            anchor_div.append(anchor);
+            view.append(anchor_div);
+        }
+    }
+
+    page_span.innerHTML = current_page;
+
+    if (current_page == 1) {
+        btn_previous.style.visibility = "hidden";
+    }
+    else {
+        btn_previous.style.visibility = "visible";
+    };
+
+    if (current_page == page_num) {
+        btn_next.style.visibility = "hidden";
+    }
+    else {
+        btn_next.style.visibility = "visible";
+    };
+
+    makePagination(api, view, current_page, results_per_page, page_num);
+
+};
 // GET ALL POSTS OF ALL USERS
 async function getPosts() {
-    // Get all posts
     const response = await fetch('/posts');
     const data = await response.json();
 
     // Delete data stored in posts-view
-    document.querySelector('#posts-view').innerHTML = ''
+    document.querySelector('#posts-view').innerHTML = '';
 
-    for (let i = 0; i < data.length; i++) {
+    // Formatting data and appending it to posts-view
+    for (let i = 0; i < 10; i++) {
         // Instantiate desired elements
-        let div = document.createElement('div');
+        let anchor_div = document.createElement('div');
         let anchor = document.createElement('a');
 
         // Declaring variables from data received
@@ -73,26 +230,42 @@ async function getPosts() {
         let body = data[i]['body'];
         let created = data[i]['created'];
         // let likes = data[i]['likes'];
-        let user_id = data[i]['user_id'];
 
         // Anchor customization w/ variables declared above
         let text = document.createTextNode(`${username} -> ${body}, on ${created}`);
         anchor.appendChild(text);
         anchor.href = `profile/${username}`;
 
-        // On clicking the anchor, prevent default behaviour and get+show profile data
+        // On clicking the anchor, prevent default behaviour and get+ show profile data
         anchor.addEventListener('click', (event) => {
             document.querySelector('#profile-view').innerHTML = '';
             event.preventDefault();
             getProfile(username);
             load_profile();
-        })
+        });
 
         // Appending anchor to div and div to posts-view
-        div.append(anchor);
-        document.querySelector('#posts-view').append(div);
+        anchor_div.append(anchor);
+        document.querySelector('#posts-view').append(anchor_div);
     };
+
+    // Declaring variables necessary for pagination
+    let current_page = 1;
+    let results_per_page = 10;
+    let page_num = Math.ceil(data.length / results_per_page);
+
+    // Validate page
+    if (current_page < 1) current_page = 1;
+    if (current_page > page_num) current_page = page_num;
+
+    let view = document.querySelector('#posts-view');
+    let api = `/posts`;
+
+    makePagination(api, view, current_page, results_per_page, page_num);
+
 };
+
+
 // GETTING FULL PROFILE DATA 
 async function getProfile(username) {
     // Get current profile data 
@@ -108,26 +281,48 @@ async function getProfile(username) {
     const response2 = await fetch(`/profile/posts/${username} `);
     const userPosts = await response2.json();
 
+    if (userPosts.length >= 10) {
+        len = 10;
+    }
+    else {
+        len = userPosts.length;
+    };
+
     // For loop to apply instructions to every post
-    for (let i = 0; i < userPosts.length; i++) {
+    for (let i = 0; i < len; i++) {
 
         // Create elements for each post
         let p = document.createElement('p');
         let br = document.createElement('br');
 
         // Get the desired data to append
-        let username = userPosts[i]['username'];
+
         let body = userPosts[i]['body'];
         let created = userPosts[i]['created'];
         // let likes = userPosts[i]['likes'];
 
         // Customize data
-        p.innerHTML = `${username} -> ${body}, on ${created}`;
+        p.innerHTML = `${body}, on ${created}`;
 
         // Append elements w/ data to div
         document.querySelector('#profile-view').append(p);
         document.querySelector('#profile-view').append(br);
     };
+
+    // Declaring variables necessary for pagination
+    let current_page = 1;
+    let results_per_page = 10;
+    let page_num = Math.ceil(userPosts.length / results_per_page);
+
+    console.log(page_num, userPosts.length, results_per_page);
+    // Validate page
+    if (current_page < 1) current_page = 1;
+    if (current_page > page_num) current_page = page_num;
+
+    let view = document.querySelector('#profile-view');
+    let api = `/profile/posts/${username}`
+
+    makePagination(api, view, current_page, results_per_page, page_num);
 
     // Retrieving data from api about follow info
     const response3 = await fetch(`profile/${username}/follow`);
@@ -155,8 +350,70 @@ async function getProfile(username) {
 
         document.querySelector('#profile-view').append(btn);
     };
+
+
 };
 
+
+
+async function getFollowingPosts() {
+    const response = await fetch('/following');
+    const data = await response.json();
+
+    if (data.length >= 10) {
+        len = 10;
+    }
+    else {
+        len = data.length;
+    }
+
+    for (let i = 0; i < len; i++) {
+
+        // Instantiate desired elements
+        let div = document.createElement('div');
+        let anchor = document.createElement('a');
+
+        // Declaring variables from data received
+        let username = data[i]['username'];
+        let body = data[i]['body'];
+        let created = data[i]['created'];
+        // let likes = data[i]['likes'];
+
+        // Anchor customization w/ variables declared above
+        let text = document.createTextNode(`${username} -> ${body}, on ${created}`);
+        anchor.appendChild(text);
+        anchor.href = `profile/${username}`;
+
+        // On clicking the anchor, prevent default behaviour and get+show profile data
+        anchor.addEventListener('click', (event) => {
+            document.querySelector('#profile-view').innerHTML = '';
+            event.preventDefault();
+            getProfile(username);
+            load_profile();
+        });
+
+        // Appending anchor to div and div to posts-view
+        div.append(anchor);
+        document.querySelector('#following-view').append(div);
+    }
+
+    // Declaring variables necessary for pagination
+    let current_page = 1;
+    let results_per_page = 10;
+    let page_num = Math.ceil(data.length / results_per_page);
+
+    // Validate page
+    if (current_page < 1) current_page = 1;
+    if (current_page > page_num) current_page = page_num;
+
+    let view = document.querySelector('#following-view');
+    let api = '/following';
+
+    makePagination(api, view, current_page, results_per_page, page_num);
+}
+
+
+// FOLLOW/UNFOLLOW
 async function follow(user) {
     const response = await fetch(`/profile/${user}/follow`, {
         method: 'PUT',
@@ -176,7 +433,6 @@ async function follow(user) {
     getProfile(user);
     load_profile();
 }
-
 async function unfollow(user) {
     const response = await fetch(`/profile/${user}/follow`, {
         method: 'PUT',
@@ -196,48 +452,6 @@ async function unfollow(user) {
     getProfile(user);
     load_profile();
 }
-
-async function getFollowingPosts() {
-    const response = await fetch('/following');
-    const data = await response.json();
-    console.log(data)
-
-    document.querySelector('#following-view').innerHTML = '';
-
-
-    // TO DO
-
-    for (let i = 0; i < data.length; i++) {
-        // Instantiate desired elements
-        let div = document.createElement('div');
-        let anchor = document.createElement('a');
-
-        // Declaring variables from data received
-        //let username = data[i]['username'];
-        let body = data[i]['body'];
-        let created = data[i]['created'];
-        // let likes = data[i]['likes'];
-
-        // Anchor customization w/ variables declared above
-        let text = document.createTextNode(` -> ${body}, on ${created}`);
-        anchor.appendChild(text);
-        // anchor.href = `profile/${username}`;
-
-        // On clicking the anchor, prevent default behaviour and get+show profile data
-        anchor.addEventListener('click', (event) => {
-            document.querySelector('#profile-view').innerHTML = '';
-            event.preventDefault();
-            getProfile(username);
-            load_profile();
-        })
-
-        // Appending anchor to div and div to posts-view
-        div.append(anchor);
-        document.querySelector('#following-view').append(div);
-    }
-}
-
-
 
 // Compose post 
 document.addEventListener('DOMContentLoaded', () => {

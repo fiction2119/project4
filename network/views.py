@@ -7,6 +7,7 @@ from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
+from django.core.paginator import InvalidPage, Paginator
 
 
 from .models import User, Post, Like, Follow
@@ -103,9 +104,9 @@ def compose(request):
 def allPosts(request):
 
     # Get and return all posts in reverse chronological order
-    posts = Post.objects.all()
+    all_posts = Post.objects.all()
 
-    return JsonResponse([post.serialize() for post in posts], safe=False)
+    return JsonResponse([post.serialize() for post in all_posts], safe=False)
 
 
 @csrf_exempt
@@ -166,18 +167,11 @@ def followingPosts(request):
     user = User.objects.get(username=request.user)
     data = Follow.objects.filter(follower=user,     is_following=True).all()
 
-    data_list = []
-    data_json = {}
+    posts_list = []
 
     for i in range(0, data.count()):
-        data_list += data[i].following.post_set.values()
-        username = data[i].following.username
-        body = data_list[i]['body']
-        created = data_list[i]['created']
-        data_json[f'{username}'] = {}
-        data_json[f'{username}']['body'] = body
-        data_json[f'{username}']['created'] = str(created)
 
-    data_full = json.dumps(data_json, indent=2)
+        posts = list(data[i].following.post_set.all())
+        posts_list += posts
 
-    return JsonResponse(data_full, safe=False)
+    return JsonResponse([post.serialize() for post in posts_list], safe=False)
