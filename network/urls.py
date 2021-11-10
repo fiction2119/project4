@@ -20,4 +20,6 @@ urlpatterns = [
          name="follow"),
     path("following", views.followingPosts,
          name="following-posts"),
+    path("edit", views.editPost, name="edit-post"),
+
 ]

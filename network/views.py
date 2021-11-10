@@ -78,6 +78,26 @@ def register(request):
         return render(request, "network/register.html")
 
 
+@login_required
+def editPost(request, pk):
+
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
+
+    user = User.objects.get(username=request.user)
+    post = Post.objects.get(id=pk, author=user)
+
+    if request.user != post.author.username:
+        return HttpResponse('You are not allowed here!!')
+
+    body = request.POST.get('body')
+    post.body = body
+
+    post.save()
+
+    return JsonResponse({"message": "Post edited successfully."}, status=201)
+
+
 @csrf_exempt
 @login_required
 def compose(request):
